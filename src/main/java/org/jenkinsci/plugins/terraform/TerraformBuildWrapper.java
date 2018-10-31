@@ -202,6 +202,25 @@ public class TerraformBuildWrapper extends BuildWrapper {
         return executablePath;
     }
 
+    public void executeInit(AbstractBuild build, final Launcher launcher, final BuildListener listener) throws Exception {
+        ArgumentListBuilder args = new ArgumentListBuilder();
+        EnvVars env = build.getEnvironment(listener);
+        setupWorkspace(build, env);
+
+        String executable = getExecutable(env, listener, launcher);
+        args.add(executable);
+
+        args.add("init");
+
+        LOGGER.info("Launching Terraform Init: "+args.toString());
+
+        int result = launcher.launch().pwd(workspacePath.getRemote()).cmds(args).stdout(listener).join();
+
+        if (result != 0) {
+            throw new Exception("Terraform Init failed: "+ result);
+        }
+    }
+
     public void executeGet(AbstractBuild build, final Launcher launcher, final BuildListener listener) throws Exception {
         ArgumentListBuilder args = new ArgumentListBuilder();
         EnvVars env = build.getEnvironment(listener);
@@ -253,6 +272,7 @@ public class TerraformBuildWrapper extends BuildWrapper {
     @Override
     public Environment setUp(AbstractBuild build, final Launcher launcher, final BuildListener listener) throws IOException, InterruptedException {
         try {
+            executeInit(build, launcher, listener);
             executeGet(build, launcher, listener);
             // get executable and var-file from environment
             EnvVars env = build.getEnvironment(listener);
